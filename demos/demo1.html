@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <button id="addSubjects">添加Subjects</button>
+  <hr />
+  <button id="addUser">添加User</button>
+  <hr />
+  <button id="getSubjects">获取Subjects列表</button>
+  <hr />
+  <button id="getUser">获取User列表</button>
+  <hr />
+  <button id="getUserSubjects">获取User & Subjects列表</button>
+  <hr />
+  <button id="getUserById">通过Id获取User</button>
+  <hr />
+  <button id="delUserById">通过Id删除User</button>
+  <hr />
+  <button id="countUser">统计User</button>
+  <hr />
+  <button id="clearUser">清空User仓库</button>
+  <hr />
+  <button id="indexGetName">User index 搜索 Name</button>
+  <hr />
+  <button id="indexGetAge">User index 搜索 age</button>
+  <hr />
+  <button id="queryUserPage">User 分页查询 </button>
+  <hr />
+
+</body>
+<script src="../dist/bundle.js"></script>
+<script>
+const gidb = new Gldb({
+  databaseName: 'testDataBase',
+  version: 1
+})
+
+/**
+ * {
+ *  keyPath: 'id', // 取 store 存储的value 中的键值, 作为 store 的 key。此键应该是value的唯一值。
+ *  autoIncrement: true // 是否自动生成 store 的 key 值。默认 false
+ * }
+*/
+gidb.createStore('mystore', { keyPath: 'id' })
+gidb.createStore('subjects', { keyPath: 'id' })
+// 创建索引
+// gidb.deleteIndex('mystore', 'name')
+// gidb.deleteIndex('mystore', 'age')
+gidb.createIndex({
+  storeName: 'mystore',
+  indexName: 'name',
+  keyPath: 'name',
+  unique: false
+})
+gidb.createIndex({
+  storeName: 'mystore',
+  indexName: 'age',
+  keyPath: 'age',
+  unique: true
+})
+
+// 添加Subjects
+document.querySelector('#addSubjects')
+  .addEventListener('click', function() {
+    const subjectName = prompt('subjectName ?')
+    gidb.putData('subjects', {
+      id: new Date().getTime(),
+      name: subjectName
+    })
+  })
+
+// 添加User
+document.querySelector('#addUser')
+  .addEventListener('click', function() {
+    const name = prompt('name ?')
+    const age = prompt('age ?')
+    gidb.putData('mystore', {
+      id: new Date().getTime(),
+      name,
+      age
+    })
+  })
+
+// 获取User列表
+document.querySelector('#getUser')
+  .addEventListener('click', async function() {
+    const data = await gidb.getData(['mystore'])
+
+    console.log('userList', data)
+  })
+
+// 获取Subjects列表
+document.querySelector('#getSubjects')
+  .addEventListener('click', async function() {
+    const data = await gidb.getData(['subjects'])
+
+    console.log('subjectsList', data)
+  })
+
+// 获取User & Subjects列表
+document.querySelector('#getUserSubjects')
+  .addEventListener('click', async function() {
+    const data = await gidb.getData(['mystore', 'subjects'])
+
+    console.log('UserSubjectsList', data)
+  })
+
+// 通过Id获取User
+document.querySelector('#getUserById')
+  .addEventListener('click', async function() {
+    const id = +prompt('userID ?')
+    const data = await gidb.getData(['mystore'], id)
+
+    console.log('UserSubjectsList', data)
+  })
+
+// 通过Id删除User
+document.querySelector('#delUserById')
+  .addEventListener('click', async function() {
+    const id = +prompt('userID ?')
+    gidb.deleteData(['mystore'], id)
+  })
+
+// 统计User
+document.querySelector('#countUser')
+  .addEventListener('click', async function() {
+    const data = await gidb.countStore('mystore')
+    console.log('user count', data)
+  })
+ 
+// 清空User仓库
+document.querySelector('#clearUser')
+  .addEventListener('click', async function() {
+    gidb.clearStore('mystore')
+  })
+  
+// User index 搜索 Name
+document.querySelector('#indexGetName')
+  .addEventListener('click', async function() {
+    const name = prompt('name ?')
+    const user = await gidb.indexStoreGetter('mystore', 'name', name)
+
+    console.log(user)
+  })
+
+// User index 搜索 age
+document.querySelector('#indexGetAge')
+  .addEventListener('click', async function() {
+    const age = prompt('age ?')
+    const user = await gidb.indexStoreGetter('mystore', 'age', age)
+
+    console.log(user)
+  })
+
+// User 分页查询 
+document.querySelector('#queryUserPage')
+  .addEventListener('click', async function() {
+    const pageNumber = prompt('pageNumber ?')
+    const pageSize = prompt('pageSize ?')
+    const data = await gidb.queryStorePage('mystore', {
+      pageNumber,
+      pageSize
+    })
+
+    console.log('data', data)
+  })
+
+</script>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    .page_container {
+      width: 650px;
+      margin: auto;
+    }
+    .upload-box {
+      padding: 50px 0 20px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #eee;
+    }
+    .inline-box {
+      display: inline-block;
+    }
+    .file-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .del_btn {
+      color: red;
+    }
+    .no-data {
+      display: none;
+      width: calc(100% - 2px);
+      height: 38px;
+      line-height: 38px;
+      font-size: 14px;
+      color: #999;
+      text-align: center;
+      border: 1px solid #808080;
+      border-top: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="page_container">
+    <h4>文件上传</h4>
+    <div class="upload-box">
+      <input type="file" id="uploader" />
+      <div class="inline-box">
+        <button id="upload_btn">上传</button>
+      </div>
+    </div>
+    <h4>文件列表</h4>
+    <table class="file-table" cellspacing="0" border="1" cellpadding="8">
+      <thead>
+        <tr>
+          <th width="200">文件名称</th>
+          <th width="80">文件类型</th>
+          <th width="100">文件大小</th>
+          <th width="100">切片数量</th>
+          <th width="120">操作</th>
+        </tr>
+      </thead>
+      <tbody class="table-tbody">
+      </tbody>
+    </table>
+    <div class="no-data">暂无数据~</div>
+  </div>
+</body>
+<script src="../dist/bundle.js"></script>
+<script>
+  const uploadBtn = document.querySelector('#upload_btn');
+  const uploader = document.querySelector('#uploader');
+  const fileTable = document.querySelector('.table-tbody');
+  const noData = document.querySelector('.no-data');
+  let file = null
+
+  const gidb = new Gldb({
+    databaseName: 'uploadDemo',
+    version: 1
+  })
+  gidb.createStore('fileList', {
+    keyPath: 'id'
+  })
+  gidb.createStore('shardList', {
+    keyPath: 'id',
+    autoIncrement: true
+  })
+  gidb.createIndex({
+    storeName: 'shardList',
+    indexName: 'fileId',
+    keyPath: 'fileId',
+    unique: false
+  })
+    .catch(err => console.log(err))
+
+  renderFiles()
+
+  // 下载文件
+  fileTable.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    if (ev.target.className !== 'down_btn') return
+    const fileId = ev.target.getAttribute('data-id')
+    console.log('fileId', fileId)
+    gidb.indexStoreGetter('shardList', 'fileId', Number(fileId))
+      .then(res => {
+        const chunks = res.sort((a, b) => a.chunkIndex - b.chunkIndex)
+        console.log(chunks)
+        const blob = new Blob(
+          chunks.map(c => c.chunk),
+          { type: chunks.type }
+        )
+
+        const aLink = document.createElement('a')
+        aLink.download = chunks[0].name
+        aLink.href = URL.createObjectURL(blob)
+        aLink.style.display = 'none'
+        document.body.appendChild(aLink)
+        aLink.click()
+        document.body.appendChild(aLink)
+      })
+  })
+
+  // 删除文件
+  fileTable.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    if (ev.target.className !== 'del_btn') return
+    const fileId = Number(
+      ev.target.getAttribute('data-id')
+    )
+    const flag = confirm('确认删除文件')
+    if (!flag) return
+    gidb.indexStoreGetter('shardList', 'fileId', fileId)
+      .then(res => {
+        return Promise.all(
+          res.reduce((p, c) => {
+            p.push(
+              gidb.deleteData(['shardList'], c.id)
+            )
+            return p
+          }, [
+            gidb.deleteData(['fileList'], fileId)
+          ])
+        )
+      })
+        .then(() => {
+          renderFiles()
+        })
+  })
+
+  // 上传文件
+  uploadBtn.addEventListener('click', async (ev) => {
+    ev.stopPropagation();
+    if (!file) return alert('请选择文件上传')
+    const fileId = new Date().getTime();
+
+    const {
+      chunksCount
+    } = await spliceFile(file, (chunk, index) => {
+      console.log(chunk)
+      gidb.putData('shardList', {
+        fileId,
+        chunk,
+        name: file.name,
+        chunkIndex: index,
+        type: file.type,
+        size: chunk.byteLength
+      })
+    })
+
+    const data = {
+      id: fileId,
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      chunksCount
+    }
+    gidb.putData('fileList', data)
+      .then(() => {
+        console.log('上传成功')
+        appendFile(data)
+      })
+  })
+
+  // 选择文件
+  uploader.addEventListener('change', (ev) => {
+    file = ev.target.files[0]
+  })
+
+  // 追加文件
+  function appendFile(file) {
+    const fileRow = document.createElement('tr');
+    const size = (file.size / 1024 / 1000).toFixed(2)
+    fileRow.innerHTML = `
+      <td>${file.name}</td>
+      <td>${file.type}</td>
+      <td>${size}M</td>
+      <td>${file.chunksCount}片</td>
+      <td>
+        <button type="button" data-id="${file.id}" class="down_btn">下载</button>
+        <button type="button" data-id="${file.id}" class="del_btn">删除</button>
+      </td>
+    `
+    fileTable.appendChild(fileRow)
+  }
+
+  // 渲染文件列表
+  async function renderFiles() {
+    const data = await gidb.getData(['fileList'])
+    if (data.length) {
+      noData.style.display = 'none'
+      fileTable.innerHTML = ''
+      data.forEach(appendFile)
+    } else {
+      noData.style.display = 'block'
+    }
+  }
+
+  // 文件切片
+  function spliceFile(file, handler, chunkSize = 2 * 1024 * 1000) {
+    const result = []
+    const chunksCount = Math.ceil(file.size / chunkSize)
+
+    return new Promise((r, j) => {
+      const reader = new FileReader()
+      reader.readAsArrayBuffer(file)
+      reader.onload = (e) => {
+        const res = e.target.result;
+        let index = 0
+        while (index < chunksCount) {
+          const start = index * chunkSize
+          const chunk = res.slice(
+            start,
+            start + chunkSize
+          )
+          handler(chunk, index);
+          result.push(chunk)
+          index++
+        }
+        r({
+          result,
+          chunksCount
+        })
+      }
+      reader.onerror = j
+    })
+  }
+</script>
+</html>

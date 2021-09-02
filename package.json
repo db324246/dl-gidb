@@ -1,0 +1,23 @@
+{
+  "name": "dl-gldb",
+  "version": "1.0.0",
+  "description": "indexdb 的独立封装",
+  "main": "./dist/bundle.js",
+  "keywords": [
+    "indexdb",
+    "javascript"
+  ],
+  "scripts": {
+    "build": "rollup --config"
+  },
+  "author": "daixiaobin",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.15.0",
+    "babel-plugin-external-helpers": "^6.22.0",
+    "babel-preset-latest": "^6.24.1",
+    "rollup": "^2.56.3",
+    "rollup-plugin-babel": "^4.4.0",
+    "rollup-plugin-terser": "^7.0.2"
+  }
+}
