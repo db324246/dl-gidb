@@ -1,6 +1,6 @@
-### dl-gldb · 基于 indexdb 的封装库
+### dl-gldb · 基于 IndexedDB 的封装库
 ---
-> `dl-gldb` 是一个包含了一系列针对 `indexdb API` 的动作封装的对象。其中所有的动作API 执行都会返回一个 Promise
+> `dl-gldb` 是一个包含了一系列针对 `IndexedDB API` 的动作封装的对象。其中所有的动作API 执行都会返回一个 Promise
 > 下文均以 `Gldb` 命名 `dl-gldb` 
 
 
@@ -18,7 +18,7 @@ Gldb 只有一个静态属性和静态方法
 
 | 属性名称 | 描述 |
 | --- | --- |
-| indexedDB | 返回当前浏览器上的indexdb对象 |
+| indexedDB | 返回当前浏览器上的 IndexedDB 对象 |
 | validateVersion  | 用于校验浏览器是否支持 IndexedDB 的方法 |
 
 
