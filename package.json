@@ -1,6 +1,6 @@
 {
   "name": "dl-gldb",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "indexdb 的独立封装",
   "main": "./dist/bundle.js",
   "keywords": [
